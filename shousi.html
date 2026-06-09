@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>箭头记忆挑战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+        
+        .game-container {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255,255,255,0.3);
+        }
+        
+        .subtitle {
+            color: #aaa;
+            margin-bottom: 20px;
+            font-size: 1em;
+        }
+        
+        /* 题目显示区 */
+        .question-area {
+            margin-bottom: 25px;
+            min-height: 80px;
+        }
+        
+        .question-label {
+            font-size: 1.1em;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        
+        .arrows-display {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            align-items: center;
+        }
+        
+        .arrow-box {
+            position: relative;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(145deg, #2a2a4a, #1a1a3a);
+            border: 2px solid #ffd700;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5em;
+            box-shadow: 0 0 15px rgba(255,215,0,0.3);
+        }
+        
+        .arrow-box .subscript {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 0.5em;
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        
+        .arrow-box .subscript.five {
+            color: #4ecdc4;
+        }
+        
+        .arrow-separator {
+            font-size: 1.2em;
+            color: #888;
+        }
+        
+        /* 游戏场地 */
+        .grid-container {
+            display: inline-block;
+            background: #0a0a1a;
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid #333;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 70px);
+            grid-template-rows: repeat(5, 70px);
+            gap: 4px;
+        }
+        
+        .cell {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(145deg, #2a2a4a, #1a1a3a);
+            border: 1px solid #444;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            position: relative;
+            color: transparent; /* 初始不显示箭头 */
+        }
+        
+        .cell:hover:not(.disabled) {
+            background: linear-gradient(145deg, #3a3a5a, #2a2a4a);
+            border-color: #666;
+            transform: scale(1.05);
+        }
+        
+        .cell.disabled {
+            background: #111;
+            border-color: #222;
+            cursor: default;
+            color: #333;
+        }
+        
+        .cell.disabled::after {
+            content: '✕';
+            color: #333;
+            font-size: 1.2em;
+        }
+        
+        .cell.revealed {
+            color: #fff; /* 点击后显示箭头 */
+        }
+        
+        .cell.selected {
+            background: linear-gradient(145deg, #4a4a6a, #3a3a5a) !important;
+            border-color: #ffd700 !important;
+            box-shadow: 0 0 15px rgba(255,215,0,0.4);
+        }
+        
+        .cell.correct {
+            background: linear-gradient(145deg, #2d5a3d, #1a4a2a) !important;
+            border-color: #4ecdc4 !important;
+            animation: correctPulse 0.5s ease;
+        }
+        
+        .cell.wrong {
+            background: linear-gradient(145deg, #5a2d3d, #4a1a2a) !important;
+            border-color: #ff6b6b !important;
+            animation: wrongShake 0.5s ease;
+        }
+        
+        .cell.answer-reveal {
+            background: linear-gradient(145deg, #3a3a6a, #2a2a5a) !important;
+            border-color: #ffd700 !important;
+            color: #ffd700 !important;
+        }
+        
+        @keyframes correctPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes wrongShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        /* 状态栏 */
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+        
+        .status-item {
+            background: linear-gradient(145deg, #2a2a4a, #1a1a3a);
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid #444;
+        }
+        
+        .status-item .label {
+            color: #888;
+            font-size: 0.8em;
+        }
+        
+        .status-item .value {
+            color: #ffd700;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        
+        /* 按钮 */
+        .btn {
+            padding: 12px 35px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            margin: 5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(145deg, #ffd700, #ffaa00);
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255,215,0,0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(145deg, #4ecdc4, #44a08d);
+            color: #fff;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(78,205,196,0.4);
+        }
+        
+        /* 界面切换 */
+        .screen {
+            display: none;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        /* 结束界面 */
+        .end-screen .final-score {
+            font-size: 4em;
+            color: #ffd700;
+            margin: 20px 0;
+            text-shadow: 0 0 30px rgba(255,215,0,0.5);
+        }
+        
+        .end-screen .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .end-screen .stat-box {
+            background: linear-gradient(145deg, #2a2a4a, #1a1a3a);
+            padding: 15px 25px;
+            border-radius: 12px;
+            border: 1px solid #444;
+        }
+        
+        .end-screen .stat-box .num {
+            font-size: 2em;
+            color: #4ecdc4;
+            font-weight: bold;
+        }
+        
+        .end-screen .stat-box .text {
+            color: #888;
+            font-size: 0.9em;
+        }
+        
+        /* 反馈信息 */
+        .feedback {
+            min-height: 30px;
+            margin: 10px 0;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        
+        .feedback.correct-text {
+            color: #4ecdc4;
+        }
+        
+        .feedback.wrong-text {
+            color: #ff6b6b;
+        }
+        
+        /* 连击显示 */
+        .combo-display {
+            font-size: 1.2em;
+            color: #ff6b6b;
+            min-height: 30px;
+            margin: 5px 0;
+        }
+        
+        .combo-display.active {
+            animation: comboPop 0.3s ease;
+        }
+        
+        @keyframes comboPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+        
+        /* 规则提示 */
+        .rules-hint {
+            background: linear-gradient(145deg, #1a1a3a, #0a0a2a);
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #333;
+            font-size: 0.9em;
+            color: #aaa;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .rules-hint strong {
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 游戏界面 -->
+        <div class="screen game-screen active" id="gameScreen">
+            <h1>🎯 箭头记忆挑战</h1>
+            <p class="subtitle">点击方格探索箭头 · 按顺序答题</p>
+            
+            <div class="rules-hint">
+                💡 点击空白方格可揭示箭头，记住位置后按题目顺序点击对应格子。每轮结束后所有格子重置为隐藏。
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="label">得分</span>
+                    <span class="value" id="score">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">连击</span>
+                    <span class="value" id="combo">0</span>
+                </div>
+            </div>
+            
+            <div class="question-area">
+                <div class="question-label" id="questionLabel">请按顺序点击对应格子</div>
+                <div class="arrows-display" id="arrowsDisplay">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+            
+            <div class="combo-display" id="comboDisplay"></div>
+            <div class="feedback" id="feedback"></div>
+            
+            <div class="grid-container">
+                <div class="grid" id="gameGrid"></div>
+            </div>
+        </div>
+        
+        <!-- 结束界面 -->
+        <div class="screen end-screen" id="endScreen">
+            <h1>🏆 游戏结束</h1>
+            <div class="final-score" id="finalScore">0</div>
+            <p style="color:#888; margin-bottom:20px;">最终得分</p>
+            
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="num" id="correctCount">0</div>
+                    <div class="text">答对题数</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num" id="totalCount">0</div>
+                    <div class="text">总题数</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num" id="maxCombo">0</div>
+                    <div class="text">最高连击</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <button class="btn btn-primary" onclick="restartGame()">🔄 再玩一次</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 游戏数据 ====================
+        
+        // 固定箭头布局 (行,列) -> 箭头
+        const ARROW_LAYOUT = {
+            '1,1': '↓', '1,2': '←', '1,3': '←', '1,4': '←', '1,5': '←',
+            '2,1': '↓',                          '2,5': '↑',
+            '3,1': '↓',                          '3,5': '↑',
+            '4,1': '↓',                          '4,5': '↑',
+            '5,1': '→', '5,2': '→', '5,3': '→', '5,4': '→', '5,5': '↑'
+        };
+        
+        // 8种固定组合，顺序不可更改
+        // 每个组合：name=显示名称, arrows=[箭头1,箭头2], cells=[坐标1,坐标2]
+        // 箭头1对应坐标1，箭头2对应坐标2
+        const COMBINATIONS = [
+            { name: '↓↓', arrows: ['↓','↓'], cells: [[2,1],[3,1]] },
+            { name: '↑↑', arrows: ['↑','↑'], cells: [[3,5],[4,5]] },
+            { name: '←←', arrows: ['←','←'], cells: [[1,3],[1,4]] },
+            { name: '→→', arrows: ['→','→'], cells: [[5,3],[5,2]] },
+            { name: '↓←', arrows: ['↓','←'], cells: [[1,1],[1,2]] },
+            { name: '↑→', arrows: ['↑','→'], cells: [[5,5],[5,4]] },
+            { name: '→↓', arrows: ['→','↓'], cells: [[5,1],[4,1]] },
+            { name: '←↑', arrows: ['←','↑'], cells: [[1,5],[2,5]] }
+        ];
+        
+        // ==================== 游戏状态 ====================
+        let gameState = {
+            score: 0,
+            combo: 0,
+            maxCombo: 0,
+            correctCount: 0,
+            totalCount: 0,
+            currentQuestion: null,
+            selectedCells: [],
+            isProcessing: false,
+            revealedCells: new Set() // 记录已揭示的格子
+        };
+        
+        // ==================== 初始化 ====================
+        
+        function initGrid() {
+            const grid = document.getElementById('gameGrid');
+            grid.innerHTML = '';
+            gameState.revealedCells = new Set();
+            
+            for (let r = 1; r <= 5; r++) {
+                for (let c = 1; c <= 5; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    
+                    const key = `${r},${c}`;
+                    const arrow = ARROW_LAYOUT[key];
+                    
+                    if (!arrow) {
+                        cell.classList.add('disabled');
+                    } else {
+                        cell.dataset.arrow = arrow;
+                        cell.textContent = arrow;
+                        // 初始不显示（通过CSS color:transparent）
+                        cell.addEventListener('click', () => onCellClick(r, c));
+                    }
+                    
+                    grid.appendChild(cell);
+                }
+            }
+        }
+        
+        // ==================== 界面切换 ====================
+        
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+        
+        // ==================== 游戏阶段 ====================
+        
+        function startGame() {
+            // 重置状态
+            gameState.score = 0;
+            gameState.combo = 0;
+            gameState.maxCombo = 0;
+            gameState.correctCount = 0;
+            gameState.totalCount = 0;
+            gameState.selectedCells = [];
+            gameState.isProcessing = false;
+            
+            updateStatus();
+            showScreen('gameScreen');
+            initGrid();
+            
+            // 生成第一题
+            nextQuestion();
+        }
+        
+        function updateStatus() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('combo').textContent = gameState.combo;
+        }
+        
+        // ==================== 题目生成 ====================
+        
+        let lastComboIndex = -1; // 记录上一轮的组合索引
+        
+        function nextQuestion() {
+            gameState.selectedCells = [];
+            gameState.isProcessing = false;
+            
+            // 随机选一种组合，但不能和上一轮相同
+            let comboIndex;
+            do {
+                comboIndex = Math.floor(Math.random() * COMBINATIONS.length);
+            } while (comboIndex === lastComboIndex && COMBINATIONS.length > 1);
+            
+            lastComboIndex = comboIndex;
+            const combo = COMBINATIONS[comboIndex];
+            
+            // 随机决定角标分配：50%概率交换5和8
+            // 不交换：arrow1标5(先选cell1), arrow2标8(后选cell2)
+            // 交换：arrow1标8(后选cell1), arrow2标5(先选cell2)
+            const swapLabels = Math.random() < 0.5;
+            
+            let display;
+            let correctOrder; // [先选的坐标, 后选的坐标]
+            
+            if (swapLabels) {
+                // 交换：arrow2标5(先选cell2), arrow1标8(后选cell1)
+                display = [
+                    { arrow: combo.arrows[0], label: '8' },
+                    { arrow: combo.arrows[1], label: '5' }
+                ];
+                correctOrder = [combo.cells[1], combo.cells[0]]; // 先cell2，后cell1
+            } else {
+                // 不交换：arrow1标5(先选cell1), arrow2标8(后选cell2)
+                display = [
+                    { arrow: combo.arrows[0], label: '5' },
+                    { arrow: combo.arrows[1], label: '8' }
+                ];
+                correctOrder = [combo.cells[0], combo.cells[1]]; // 先cell1，后cell2
+            }
+            
+            gameState.currentQuestion = {
+                combo,
+                display,
+                correctOrder,
+                swapLabels
+            };
+            
+            renderQuestion();
+            clearFeedback();
+        }
+        
+        function renderQuestion() {
+            const container = document.getElementById('arrowsDisplay');
+            container.innerHTML = '';
+            
+            const q = gameState.currentQuestion;
+            
+            q.display.forEach((item) => {
+                const box = document.createElement('div');
+                box.className = 'arrow-box';
+                box.innerHTML = `
+                    ${item.arrow}
+                    <span class="subscript ${item.label === '5' ? 'five' : ''}">${item.label}</span>
+                `;
+                container.appendChild(box);
+            });
+            
+            // 判断是否为同向箭头（两个箭头相同）
+            const isSameDirection = q.combo.arrows[0] === q.combo.arrows[1];
+            
+            document.getElementById('questionLabel').textContent = 
+                isSameDirection 
+                    ? `请找到两个「${q.combo.arrows[0]}」的位置（顺序不限）` 
+                    : `请先选角标5对应的格子，再选角标8对应的格子`;
+        }
+        
+        // ==================== 点击处理 ====================
+        
+        function onCellClick(row, col) {
+            if (gameState.isProcessing) return;
+            
+            const cellKey = `${row},${col}`;
+            const cellEl = document.querySelector(`#gameGrid .cell[data-row="${row}"][data-col="${col}"]`);
+            
+            // 如果格子还没被揭示，先揭示箭头
+            if (!gameState.revealedCells.has(cellKey)) {
+                gameState.revealedCells.add(cellKey);
+                cellEl.classList.add('revealed');
+                // 短暂延迟，让玩家看到箭头
+                setTimeout(() => {
+                    // 如果这是答题过程中的点击，继续处理
+                    if (gameState.selectedCells.length < 2) {
+                        processSelection(row, col);
+                    }
+                }, 300);
+                return;
+            }
+            
+            // 已揭示的格子，直接处理选择
+            processSelection(row, col);
+        }
+        
+        function processSelection(row, col) {
+            // 检查是否已选
+            const alreadySelected = gameState.selectedCells.find(c => c[0] === row && c[1] === col);
+            if (alreadySelected) return;
+            
+            // 记录选择
+            gameState.selectedCells.push([row, col]);
+            
+            // 高亮格子
+            const cellEl = document.querySelector(`#gameGrid .cell[data-row="${row}"][data-col="${col}"]`);
+            cellEl.classList.add('selected');
+            
+            // 检查是否选了两个
+            if (gameState.selectedCells.length === 2) {
+                gameState.isProcessing = true;
+                checkAnswer();
+            }
+        }
+        
+        function checkAnswer() {
+            const q = gameState.currentQuestion;
+            const [first, second] = gameState.selectedCells;
+            const [correct1, correct2] = q.correctOrder;
+            
+            let isCorrect;
+            
+            // 判断是否为同向箭头
+            const isSameDirection = q.combo.arrows[0] === q.combo.arrows[1];
+            
+            if (isSameDirection) {
+                // 同向：顺序不限，只要两个格子都对
+                const matchA = first[0] === correct1[0] && first[1] === correct1[1];
+                const matchB = second[0] === correct2[0] && second[1] === correct2[1];
+                const matchC = first[0] === correct2[0] && first[1] === correct2[1];
+                const matchD = second[0] === correct1[0] && second[1] === correct1[1];
+                isCorrect = (matchA && matchB) || (matchC && matchD);
+            } else {
+                // 异向：必须按correctOrder顺序
+                const match1 = first[0] === correct1[0] && first[1] === correct1[1];
+                const match2 = second[0] === correct2[0] && second[1] === correct2[1];
+                isCorrect = match1 && match2;
+            }
+            
+            gameState.totalCount++;
+            
+            if (isCorrect) {
+                handleCorrect();
+            } else {
+                handleWrong();
+            }
+        }
+        
+        function handleCorrect() {
+            gameState.correctCount++;
+            gameState.combo++;
+            if (gameState.combo > gameState.maxCombo) {
+                gameState.maxCombo = gameState.combo;
+            }
+            
+            const bonus = Math.min(gameState.combo - 1, 5) * 2;
+            const points = 10 + bonus;
+            gameState.score += points;
+            
+            updateStatus();
+            
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = `✅ 正确！+${points}分`;
+            feedback.className = 'feedback correct-text';
+            
+            const comboDisplay = document.getElementById('comboDisplay');
+            if (gameState.combo >= 2) {
+                comboDisplay.textContent = `🔥 ${gameState.combo}连击！`;
+                comboDisplay.classList.add('active');
+                setTimeout(() => comboDisplay.classList.remove('active'), 300);
+            } else {
+                comboDisplay.textContent = '';
+            }
+            
+            gameState.selectedCells.forEach(([r, c]) => {
+                const el = document.querySelector(`#gameGrid .cell[data-row="${r}"][data-col="${c}"]`);
+                el.classList.remove('selected');
+                el.classList.add('correct');
+            });
+            
+            // 延迟后重置所有格子并进入下一题
+            setTimeout(() => {
+                resetAllCells();
+                nextQuestion();
+            }, 800);
+        }
+        
+        function handleWrong() {
+            gameState.combo = 0;
+            updateStatus();
+            
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = '❌ 错误！显示正确答案...';
+            feedback.className = 'feedback wrong-text';
+            document.getElementById('comboDisplay').textContent = '';
+            
+            gameState.selectedCells.forEach(([r, c]) => {
+                const el = document.querySelector(`#gameGrid .cell[data-row="${r}"][data-col="${c}"]`);
+                el.classList.remove('selected');
+                el.classList.add('wrong');
+            });
+            
+            // 显示正确答案
+            const q = gameState.currentQuestion;
+            q.correctOrder.forEach(([r, c], idx) => {
+                setTimeout(() => {
+                    const el = document.querySelector(`#gameGrid .cell[data-row="${r}"][data-col="${c}"]`);
+                    el.classList.remove('wrong');
+                    el.classList.add('answer-reveal');
+                    // 确保箭头显示
+                    gameState.revealedCells.add(`${r},${c}`);
+                    el.classList.add('revealed');
+                }, idx * 200);
+            });
+            
+            // 延迟后重置所有格子并进入下一题
+            setTimeout(() => {
+                resetAllCells();
+                nextQuestion();
+            }, 1800);
+        }
+        
+        // 重置所有格子为隐藏状态
+        function resetAllCells() {
+            gameState.revealedCells = new Set();
+            document.querySelectorAll('#gameGrid .cell').forEach(cell => {
+                cell.classList.remove('selected', 'correct', 'wrong', 'answer-reveal', 'revealed');
+            });
+        }
+        
+        function clearFeedback() {
+            document.getElementById('feedback').textContent = '';
+            document.getElementById('feedback').className = 'feedback';
+        }
+        
+        // ==================== 结束游戏 ====================
+        
+        function endGame() {
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('correctCount').textContent = gameState.correctCount;
+            document.getElementById('totalCount').textContent = gameState.totalCount;
+            document.getElementById('maxCombo').textContent = gameState.maxCombo;
+            
+            showScreen('endScreen');
+        }
+        
+        function restartGame() {
+            lastComboIndex = -1;
+            startGame();
+        }
+        
+        // ==================== 页面加载自动开始 ====================
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            startGame();
+        });
+        
+        // ==================== 键盘快捷键 ====================
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (document.getElementById('gameScreen').classList.contains('active')) {
+                    endGame();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
